@@ -20,7 +20,7 @@ cols <- MetBrewer::met.brewer("OKeeffe2", type = "continuous")
 ## 1) read and prep the data 
 
 # jeddah station temperature data 
-jeddah_daily <- read_csv("~/Downloads/SA000041024.csv")
+jeddah_daily <- read_csv(paste0(getwd(), "/data/SA000041024.csv"))
 jeddah_daily$year <- substr(jeddah_daily$DATE, 1, 4)
 jeddah_daily$month <- substr(jeddah_daily$DATE, 6, 7)
 jeddah_daily <- subset(jeddah_daily, month == 12)
@@ -43,23 +43,24 @@ jeddah_daily_decadal <- jeddah_daily %>%
   dplyr::summarise(average = mean(TAVG, na.rm = T))
 
 # Jeddah ERA5 reanalysis data
-data <- raster::stack("~/Downloads/data-3.nc")
-plot(data[[1]])
-sa <- read_sf("~/Downloads/data-2/polbnda_sau.shp")
-sau_p <- read_sf("/Users/mustafazahid/Downloads/gadm41_SAU_shp/gadm41_SAU_2.shp")
-plot(sau_p["geometry"], add = T)
-jeddah_p <- read_sf("/Users/mustafazahid/Downloads/gadm41_SAU_shp/gadm41_SAU_2.shp")
+region_dec <- raster::stack(paste0(getwd(), "/data/data-3.nc"))
+
+# Saudi Shapefile 2nd division
+#sa <- read_sf("~/Downloads/data-2/polbnda_sau.shp")
+sau_p <- read_sf(paste0(getwd(), "/data/gadm41_SAU_shp/gadm41_SAU_2.shp"))
+
+# get jeddah
+jeddah_p <- read_sf(paste0(getwd(), "/data/gadm41_SAU_shp/gadm41_SAU_2.shp"))
 jeddah_p <- subset(jeddah_p, NAME_2 == "Jiddah")
-lines(jeddah_p)
-jeddah_long <- exactextractr::exact_extract(data, 
+
+# extract and reshape data
+region_dec <- readAll(region_dec)
+jeddah_long <- exactextractr::exact_extract(region_dec, 
                                             jeddah_p, 
                                             fun = "mean")
 jeddah_long <- melt(jeddah_long)
 jeddah_long$year <- substr(jeddah_long$variable, 7, 10)
 jeddah_long$month <- substr(jeddah_long$variable, 12, 13)
-#jeddah_long_avg <- jeddah_long %>% 
-#  dplyr::group_by(month, year) %>% 
-#  dplyr::summarise(mean_temp = mean(value, na.rm = T))
 jeddah_long_12 <- subset(jeddah_long, month == 12)
 jeddah_long_12$value <- jeddah_long_12$value - 273.15
 jeddah_long_12 <- subset(jeddah_long_12, year < 2023)
@@ -67,8 +68,9 @@ jeddah_long_12$year <- as.numeric(jeddah_long_12$year)
 jeddah_long_12$value <- as.numeric(jeddah_long_12$value)
 
 # Region monthly average 1950-2023
-data <- raster::stack("~/Downloads/data-4.nc")
-sau_p_temp <- exactextractr::exact_extract(data, 
+region_yrs <- raster::stack(paste0(getwd(), "/data/data-4.nc"))
+region_yrs <- readAll(region_yrs)
+sau_p_temp <- exactextractr::exact_extract(region_yrs, 
                                            sau_p, 
                                            fun = "mean", 
                                            append_cols = c("GID_1", "NAME_1", 
